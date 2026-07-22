@@ -850,7 +850,7 @@ Top-10 候选 Chunk → Reranker 模型精排 → Top-5 注入 Prompt
 - 精排阶段用 Cross-Encoder（逐对打分，精度高但慢）
 - 两阶段架构：召回 100→10，精排 10→5
 
-**技术选型**：DashScope Rerank API 或本地 BGE-Reranker-v2-m3
+**技术选型**：DashScope gte-rerank API
 
 **面试讲点**：Bi-Encoder vs Cross-Encoder 的区别，为什么不能全用 Cross-Encoder（性能）
 
