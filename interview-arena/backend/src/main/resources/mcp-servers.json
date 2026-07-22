@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pdf-toolkit": {
+      "command": "npx",
+      "args": ["-y", "@aryanbv/pdf-toolkit-mcp"]
+    }
+  }
+}

@@ -1,0 +1,47 @@
+# ===== Java / Maven =====
+target/
+*.jar
+*.war
+*.class
+
+# ===== IDE =====
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+
+# ===== Node.js / Next.js =====
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== 系统 =====
+.DS_Store
+Thumbs.db
+
+# ===== 环境变量 / 密钥 =====
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ===== 日志 =====
+*.log
+logs/
+
+# ===== Docker =====
+# 不忽略 Dockerfile 和 docker-compose.yml
+
+# ===== 个人学习资料（不提交到 GitHub）=====
+docs/qa/
+docs/八股映射表.md
+docs/面试亮点.md
+tasks/

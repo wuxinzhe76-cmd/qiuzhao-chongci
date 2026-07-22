@@ -1,0 +1,148 @@
+# 生产环境配置(Docker 部署用)
+# 通过环境变量注入连接地址,默认用 host.docker.internal(宿主机)
+
+spring:
+  application:
+    name: interview-arena-backend
+
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:host.docker.internal}:3306/interview_arena?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:Arena@2026SecurePwd}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    redis:
+      host: ${REDIS_HOST:host.docker.internal}
+      port: 6379
+      database: 0
+      password: ${REDIS_PASSWORD:Redis@2026Secure}
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:host.docker.internal}
+    port: 5672
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:Mq@2026Secure}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 1
+
+  devtools:
+    restart:
+      enabled: false
+
+  # ==================== Elasticsearch ====================
+  elasticsearch:
+    uris: http://${ES_HOST:host.docker.internal}:9200
+    connection-timeout: 5s
+    socket-timeout: 30s
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+
+  # ==================== Spring AI ====================
+  ai:
+    # === OpenAI 兼容（MiniMax Chat） ===
+    openai:
+      api-key: ${MINIMAX_API_KEY}          # 顶层 API key（所有 OpenAI 子模块共用）
+      chat:
+        base-url: ${MINIMAX_BASE_URL:https://api.minimaxi.com}
+        api-key: ${MINIMAX_API_KEY}
+        options:
+          model: ${MINIMAX_CHAT_MODEL:MiniMax-M3}
+          temperature: 0.7
+    dashscope:
+      api-key: ${AI_DASHSCOPE_API_KEY}
+      chat:
+        options:
+          model: qwen-plus
+          temperature: 0.7
+      embedding:
+        options:
+          model: text-embedding-v3
+    vectorstore:
+      milvus:
+        client:
+          host: ${MILVUS_HOST:host.docker.internal}
+          port: 19530
+          username: root
+          password: milvus
+        database-name: default
+        collection-name: interview_arena_qa
+        embedding-dimension: 1024
+        index-type: HNSW
+        metric-type: COSINE
+        initialize-schema: true
+
+    # ==================== MCP 配置（P2 Client + P3 Server） ====================
+    mcp:
+      server:                                   # P3: 把面试服务暴露为 MCP Server
+        name: interview-arena-server
+        version: 1.0.0
+        type: SYNC
+        protocol: SSE                           # SSE 协议，外部 AI 通过 HTTP 连接
+        sse-endpoint: /sse
+        capabilities:
+          tools: true
+          logging: true
+      client:                                   # P2: 调用外部 MCP Server（PDF Toolkit）
+        stdio:
+          servers-configuration: classpath:mcp-servers.json
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: default
+      paths-to-match: /**
+      display-name: interview-arena API
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+# ==================== AI 面试模块配置（蓝图 §5.4） ====================
+interview:
+  max-rounds: 10                # 总轮次上限（大厂面试 45-60 分钟，每轮 4-5 分钟，10 轮覆盖）
+  max-question-rounds: 3        # 单题追问上限（防 AI 在一道题上无限追问）
+  history-window-size: 10       # Redis 对话历史滑动窗口大小（最近 10 条）
+  redis-ttl: 2h                 # Redis 5 个 key 的 TTL
+
+  # ==================== LLM 模块配置 ====================
+  llm:
+    primary:                    # 主模型（面试/RAG 日常使用）
+      model: ${MINIMAX_CHAT_MODEL:MiniMax-M3}
+      temperature: 0.7
+    fallback:                   # 备用模型（主模型故障时降级）
+      model: ${MINIMAX_FALLBACK_MODEL:abab6.5s-chat}
+      temperature: 0.3
+    budget:                     # Token 预算三级控制
+      global: 100000            # 全局预算（所有会话共享）
+      session: 20000            # 单会话预算
+      round: 5000               # 单轮对话预算
+
+# ==================== Spring Cache 配置（Redis 缓存，P1 高并发防护） ====================
+spring.cache:
+  type: redis
+  redis:
+    time-to-live: 30m           # 缓存默认 TTL 30 分钟
+    use-key-prefix: true
+    cache-names: question:detail

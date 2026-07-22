@@ -1,0 +1,167 @@
+spring:
+  application:
+    name: interview-arena-backend
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:mysql://117.72.62.12:3306/interview_arena?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: ${MYSQL_PASSWORD:Arena@2026SecurePwd}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    redis:
+      host: 117.72.62.12
+      port: 6379
+      database: 0
+      password: ${REDIS_PASSWORD:Redis@2026Secure}
+
+  rabbitmq:
+    host: 117.72.62.12
+    port: 5672
+    username: admin
+    password: ${RABBITMQ_PASSWORD:Mq@2026Secure}
+    # 消息确认机制
+    publisher-confirm-type: correlated   # 生产者确认(消息到达交换机)
+    publisher-returns: true               # 消息路由失败退回
+    listener:
+      simple:
+        acknowledge-mode: manual          # 手动 ACK(消费者处理完才确认)
+        prefetch: 1                        # 一次只取 1 条(公平分发,不堆积)
+
+  # ==================== Kafka(面试报告/记忆整合异步化) ====================
+  kafka:
+    bootstrap-servers: 117.72.62.12:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: interview-arena
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: "*"
+
+  devtools:
+    restart:
+      enabled: true
+
+  # ==================== Elasticsearch（BM25 关键词检索 + 倒排索引） ====================
+  elasticsearch:
+    uris: http://117.72.62.12:9200
+    connection-timeout: 5s
+    socket-timeout: 30s
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+
+  # ==================== Spring AI 配置 ====================
+  ai:
+    # === OpenAI 兼容（MiniMax Chat） ===
+    openai:
+      api-key: ${MINIMAX_API_KEY}          # 顶层 API key（所有 OpenAI 子模块共用）
+      chat:
+        base-url: ${MINIMAX_BASE_URL:https://api.minimaxi.com}
+        api-key: ${MINIMAX_API_KEY}
+        options:
+          model: ${MINIMAX_CHAT_MODEL:MiniMax-M3}
+          temperature: 0.7
+
+    # === DashScope（通义千问 Embedding + Rerank） ===
+    dashscope:
+      api-key: ${AI_DASHSCOPE_API_KEY}
+      embedding:
+        options:
+          model: text-embedding-v3  # 输出 1024 维
+
+    # Milvus 向量数据库
+    vectorstore:
+      milvus:
+        client:
+          host: 117.72.62.12
+          port: 19530
+          username: root
+          password: milvus
+        database-name: default
+        collection-name: interview_arena_qa    # 面试题知识库 collection
+        embedding-dimension: 1024              # 对齐 text-embedding-v3 输出维度
+        index-type: HNSW                       # 企业级索引：HNSW（图索引，精度+速度兼顾）
+        metric-type: COSINE                    # 余弦相似度
+        initialize-schema: true                # 自动创建 collection
+
+    # ==================== MCP 配置（P2 Client + P3 Server） ====================
+    mcp:
+      server:                                   # P3: 把面试服务暴露为 MCP Server
+        name: interview-arena-server
+        version: 1.0.0
+        type: SYNC
+        protocol: SSE                           # SSE 协议，外部 AI 通过 HTTP 连接
+        sse-endpoint: /sse
+        capabilities:
+          tools: true
+          logging: true
+      client:                                   # P2: 调用外部 MCP Server（PDF Toolkit）
+        stdio:
+          servers-configuration: classpath:mcp-servers.json
+
+# MyBatis-Plus 配置（顶级,不在 spring 下）
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# Knife4j（顶级,不在 spring 下）
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: default
+      paths-to-match: /**
+      display-name: interview-arena API
+
+# Actuator
+management:
+  endpoint:
+    health:
+      show-details: always
+
+# ==================== AI 面试模块配置（蓝图 §5.4） ====================
+interview:
+  # PDF 参考答案源目录（RAG PDF 导入用）
+  pdf:
+    source-dir: /Users/a1234/Desktop/学习总规划/1-AI大模型相关内容/参考答案
+  max-rounds: 10                # 总轮次上限（大厂面试 45-60 分钟，每轮 4-5 分钟，10 轮覆盖）
+  max-question-rounds: 3        # 单题追问上限（防 AI 在一道题上无限追问）
+  history-window-size: 10       # Redis 对话历史滑动窗口大小（最近 10 条）
+  redis-ttl: 2h                 # Redis 5 个 key 的 TTL
+
+  # ==================== LLM 模块配置 ====================
+  llm:
+    primary:                    # 主模型（面试/RAG 日常使用）
+      model: ${MINIMAX_CHAT_MODEL:MiniMax-M3}
+      temperature: 0.7
+    fallback:                   # 备用模型（主模型故障时降级）
+      model: ${MINIMAX_FALLBACK_MODEL:abab6.5s-chat}
+      temperature: 0.3
+    budget:                     # Token 预算三级控制
+      global: 100000            # 全局预算（所有会话共享）
+      session: 20000            # 单会话预算
+      round: 5000               # 单轮对话预算
+
+# ==================== Spring Cache 配置（Redis 缓存，P1 高并发防护） ====================
+spring.cache:
+  type: redis
+  redis:
+    time-to-live: 30m           # 缓存默认 TTL 30 分钟
+    use-key-prefix: true
+    cache-names: question:detail

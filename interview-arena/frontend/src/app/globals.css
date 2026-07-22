@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-display: 'Georgia', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  background-color: #FAF8F5;
+  color: #1A1A1A;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+/* 装饰性网格背景 */
+.bg-grid {
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h1v40H0zM0 0h40v1H0z' fill='%23000' fill-opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* 卡片悬浮效果 */
+.card-hover {
+  transition: all 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* 难度标签 */
+.badge-easy { @apply bg-green-50 text-green-700 border-green-200; }
+.badge-medium { @apply bg-amber-50 text-amber-700 border-amber-200; }
+.badge-hard { @apply bg-red-50 text-red-700 border-red-200; }
+
+/* 判题状态 */
+.status-ACCEPTED { @apply text-green-600; }
+.status-WRONG_ANSWER { @apply text-red-600; }
+.status-TIME_LIMIT_EXCEEDED { @apply text-amber-600; }
+.status-RUNTIME_ERROR { @apply text-purple-600; }
+.status-PENDING { @apply text-gray-500; }
+.status-JUDGING { @apply text-blue-500 animate-pulse; }
+
+/* 滚动条美化 */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d0c8; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #b8b3a8; }

@@ -1,0 +1,38 @@
+# Build artifacts
+node_modules/
+target/
+build/
+dist/
+.next/
+__pycache__/
+*.pyc
+*.pyo
+*.class
+*.egg-info/
+*.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+maven-status/
+
+# Trae / Agent configs
+.trae/
+.agent/
+
+# Lock files
+package-lock.json

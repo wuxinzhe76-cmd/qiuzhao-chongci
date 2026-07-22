@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    build: .
+    image: interview-elasticsearch:8.17.0-ik
+    container_name: interview-elasticsearch
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks:
+      - infra-net
+
+volumes:
+  es-data:
+
+networks:
+  infra-net:
+    external: true
+    name: backend-env_default

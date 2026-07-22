@@ -1,0 +1,628 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0f1117;
+  color: #e4e4e7;
+  line-height: 1.6;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  background: #161822;
+  border-right: 1px solid #272a35;
+  padding: 20px 0;
+}
+
+.sidebar h1 {
+  font-size: 16px;
+  padding: 0 20px 20px;
+  border-bottom: 1px solid #272a35;
+  color: #818cf8;
+}
+
+.sidebar nav a {
+  display: block;
+  padding: 10px 20px;
+  color: #a1a1aa;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.sidebar nav a:hover,
+.sidebar nav a.active {
+  background: #1e2030;
+  color: #818cf8;
+}
+
+/* Main content */
+.main-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.page-title {
+  font-size: 20px;
+  margin-bottom: 20px;
+  color: #f4f4f5;
+}
+
+/* Waterfall Chart */
+.waterfall {
+  background: #161822;
+  border-radius: 8px;
+  border: 1px solid #272a35;
+  padding: 20px;
+}
+
+.waterfall-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.waterfall-label {
+  width: 200px;
+  flex-shrink: 0;
+  color: #a1a1aa;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.waterfall-bar-container {
+  flex: 1;
+  position: relative;
+  height: 24px;
+  background: #1e2030;
+  border-radius: 4px;
+}
+
+.waterfall-bar {
+  position: absolute;
+  height: 100%;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  font-size: 11px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.waterfall-bar.trace { background: #6366f1; }
+.waterfall-bar.llm { background: #8b5cf6; }
+.waterfall-bar.tool { background: #06b6d4; }
+
+.waterfall-duration {
+  width: 80px;
+  text-align: right;
+  color: #71717a;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+/* Metrics Compare */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  background: #161822;
+  border: 1px solid #272a35;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.metric-card h3 {
+  font-size: 12px;
+  color: #71717a;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.metric-card .value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #f4f4f5;
+}
+
+.metric-card .unit {
+  font-size: 14px;
+  color: #71717a;
+  margin-left: 4px;
+}
+
+/* Chart container */
+.chart-container {
+  background: #161822;
+  border: 1px solid #272a35;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.chart-container h3 {
+  font-size: 14px;
+  margin-bottom: 16px;
+  color: #a1a1aa;
+}
+
+/* Table */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid #272a35;
+  color: #71717a;
+  font-weight: 500;
+}
+
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #1e2030;
+  color: #d4d4d8;
+}
+
+.data-table tr:hover td {
+  background: #1e2030;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #71717a;
+}
+
+/* Trace selector */
+.trace-selector {
+  margin-bottom: 20px;
+}
+
+.trace-selector select {
+  background: #161822;
+  border: 1px solid #272a35;
+  color: #e4e4e7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  min-width: 300px;
+}
+
+/* ============================================================
+   Timeline 页面
+   ============================================================ */
+
+.timeline-container {
+  background: #161822;
+  border-radius: 8px;
+  border: 1px solid #272a35;
+  padding: 20px;
+}
+
+.timeline {
+  position: relative;
+  padding-left: 8px;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 64px;
+  top: 24px;
+  bottom: -16px;
+  width: 2px;
+  background: #272a35;
+}
+
+.timeline-item:last-child::before {
+  display: none;
+}
+
+.timeline-time {
+  width: 56px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #71717a;
+  padding-top: 4px;
+  text-align: right;
+  padding-right: 8px;
+}
+
+.timeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6366f1;
+  flex-shrink: 0;
+  margin-top: 6px;
+  margin-right: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-content {
+  flex: 1;
+  background: #1e2030;
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.timeline-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.timeline-badge.trace { background: #312e81; color: #a5b4fc; }
+.timeline-badge.llm { background: #4c1d95; color: #c4b5fd; }
+.timeline-badge.tool { background: #164e63; color: #67e8f9; }
+.timeline-badge.memory { background: #713f12; color: #fde047; }
+
+.timeline-name {
+  font-size: 13px;
+  color: #e4e4e7;
+  font-weight: 500;
+}
+
+.timeline-duration {
+  font-size: 11px;
+  color: #71717a;
+  margin-left: auto;
+}
+
+.timeline-attrs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.timeline-attr {
+  font-size: 11px;
+  background: #161822;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #a1a1aa;
+}
+
+/* ============================================================
+   Prompt Replay 页面
+   ============================================================ */
+
+.replay-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.replay-section {
+  background: #161822;
+  border: 1px solid #272a35;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.replay-section h3 {
+  font-size: 14px;
+  color: #a1a1aa;
+  margin-bottom: 16px;
+}
+
+.prompt-card,
+.tool-card {
+  background: #1e2030;
+  border: 1px solid #272a35;
+  border-radius: 6px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.prompt-header,
+.tool-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.prompt-model,
+.tool-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f4f4f5;
+}
+
+.prompt-status,
+.tool-status {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.prompt-status.success,
+.tool-status.success {
+  background: #14532d;
+  color: #86efac;
+}
+
+.prompt-status.error,
+.tool-status.error {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.prompt-tokens,
+.prompt-latency,
+.prompt-stream,
+.tool-type,
+.tool-duration {
+  font-size: 11px;
+  color: #a1a1aa;
+  background: #161822;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.prompt-stream {
+  background: #312e81;
+  color: #a5b4fc;
+}
+
+.tool-subtype {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.tool-subtype.mcp { background: #164e63; color: #67e8f9; }
+.tool-subtype.rag { background: #713f12; color: #fde047; }
+.tool-subtype.normal { background: #3f3f46; color: #d4d4d8; }
+
+.tool-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.meta-tag {
+  font-size: 11px;
+  background: #1e1b4b;
+  color: #c7d2fe;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid #312e81;
+}
+
+.prompt-content,
+.tool-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prompt-input,
+.prompt-output,
+.tool-input,
+.tool-output {
+  font-size: 12px;
+}
+
+.prompt-input strong,
+.prompt-output strong,
+.tool-input strong,
+.tool-output strong {
+  color: #71717a;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.prompt-input pre,
+.prompt-output pre,
+.tool-input pre,
+.tool-output pre {
+  background: #0f1117;
+  border: 1px solid #272a35;
+  border-radius: 4px;
+  padding: 10px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #d4d4d8;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.prompt-error,
+.tool-error {
+  font-size: 12px;
+  color: #fca5a5;
+  background: #450a0a;
+  border: 1px solid #7f1d1d;
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+/* ============================================================
+   Session 列表页面
+   ============================================================ */
+
+.session-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.session-table {
+  background: #161822;
+  border: 1px solid #272a35;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.center {
+  text-align: center;
+  color: #71717a;
+}
+
+.mono {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: 12px;
+}
+
+.ellipsis {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.badge.completed { background: #14532d; color: #86efac; }
+.badge.error { background: #7f1d1d; color: #fca5a5; }
+.badge.running { background: #1e3a5f; color: #93c5fd; }
+
+.btn-sm {
+  background: #1e2030;
+  border: 1px solid #312e81;
+  color: #a5b4fc;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-sm:hover {
+  background: #312e81;
+  color: #e0e7ff;
+}
+
+.detail-panel {
+  background: #161822;
+  border: 1px solid #272a35;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.detail-panel h3 {
+  font-size: 14px;
+  color: #a1a1aa;
+  margin-bottom: 16px;
+}
+
+/* ============================================================
+   Leaderboard 页面
+   ============================================================ */
+
+.leaderboard-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tab-btn {
+  background: #161822;
+  border: 1px solid #272a35;
+  color: #a1a1aa;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  border-color: #312e81;
+  color: #c7d2fe;
+}
+
+.tab-btn.active {
+  background: #312e81;
+  border-color: #6366f1;
+  color: #e0e7ff;
+}
+
+.leaderboard-table {
+  background: #161822;
+  border: 1px solid #272a35;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.rank {
+  font-weight: 600;
+  color: #818cf8;
+  width: 30px;
+}
+
+.warn {
+  color: #fbbf24;
+}
+
+.danger {
+  color: #f87171;
+  font-weight: 600;
+}
+
+.highlight {
+  color: #818cf8;
+  font-weight: 600;
+}
+
+/* ============================================================
+   Waterfall memory type (补全)
+   ============================================================ */
+
+.waterfall-bar.memory { background: #eab308; }

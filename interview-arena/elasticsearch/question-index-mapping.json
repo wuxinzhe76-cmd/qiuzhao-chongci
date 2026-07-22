@@ -1,0 +1,32 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "analysis": {
+      "analyzer": {
+        "ik_smart_analyzer": {
+          "type": "custom",
+          "tokenizer": "ik_smart",
+          "filter": ["lowercase"]
+        },
+        "ik_max_word_analyzer": {
+          "type": "custom",
+          "tokenizer": "ik_max_word",
+          "filter": ["lowercase"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "questionId":     { "type": "long" },
+      "title":          { "type": "text", "analyzer": "ik_max_word_analyzer", "search_analyzer": "ik_smart_analyzer" },
+      "content":        { "type": "text", "analyzer": "ik_max_word_analyzer", "search_analyzer": "ik_smart_analyzer" },
+      "answer":         { "type": "text", "analyzer": "ik_max_word_analyzer", "search_analyzer": "ik_smart_analyzer" },
+      "tags":           { "type": "keyword" },
+      "difficulty":     { "type": "keyword" },
+      "type":           { "type": "keyword" },
+      "createTime":     { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||epoch_millis" }
+    }
+  }
+}
