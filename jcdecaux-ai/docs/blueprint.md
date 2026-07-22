@@ -12,9 +12,9 @@
 
 ### 1.1 项目背景
 
-德高（JCDecaux）户外广告业务覆盖快消、美妆、金融、旅游、汽车等 11 个核心行业，约 2000 家企业客户。销售团队在日常拓客中面临三大痛点：
+德高（JCDecaux）户外广告业务覆盖快消、美妆、金融、旅游、汽车等核心行业（示例规模约 2000 家企业客户，仅作背景说明，非精确统计）。销售团队在日常拓客中面临三大痛点：
 
-1. **客户优先级难判断**：2000+ 客户中，谁下个月更可能释放户外预算？依据是什么？
+1. **客户优先级难判断**：大量客户中，谁下个月更可能释放户外预算？依据是什么？
 2. **提案准备成本高**：首次见客户时，缺乏直观素材展示"广告投出来长什么样"，依赖历史案例，转化效率低。
 3. **决策缺乏数据支撑**：销售凭经验判断"该不该跟"，缺少"预算节奏 + 行业周期 + 实时信号"的结构化归因。
 
@@ -23,8 +23,18 @@
 构建一套 **"数据驱动 + AI 赋能"** 的智能决策系统，实现：
 
 - ✅ **决策层**：基于 GraphRAG 的知识检索与推理，输出客户/行业优先级评分 + 可解释归因
-- ✅ **执行层**：一键生成"客户定制 + 城市地标 + 动态视频"的提案素材，2 分钟出片
+- ✅ **执行层**：一键生成"客户定制 + 城市地标 + 动态视频"的提案素材（目标：分钟级出片，具体耗时待压测验证）
 - ✅ **智能层**：Agent 自主编排多路工具（图谱检索 + 地图数据 + 实时舆情 + 视频生成），融合历史规律与实时信号
+
+### 1.2.1 指标分级说明
+
+> 🔴 项目指标严格区分"已验证"与"目标/待验证"，避免面试中被追问穿。
+
+| 指标分级 | 说明 | 具体指标 |
+|---------|------|---------|
+| **✅ 已验证指标** | 业务交付效率（非接口延迟），内部试用可证明 | 人工制作广告效果图从 3-4 天缩短至约 1 天 |
+| **🎯 目标/待验证** | 系统上线后需压测验证 | GraphRAG 检索 P95 延迟、向量召回准确率、点位推荐采纳率、投前预测误差、效果图平均生成时间 |
+| **📋 示例指标** | 仅用于需求理解，非承诺 | 客户数量、出片耗时等具体数字 |
 
 ### 1.3 核心差异化
 
@@ -33,7 +43,7 @@
 | 检索方式 | 向量相似度匹配 | 图遍历 + 向量召回双路融合 |
 | 推理能力 | 单跳检索，无法多跳推理 | 支持多跳推理（品牌→城市→坪效→历史案例） |
 | 上下文理解 | 语义相近但业务无关 | 保留业务逻辑关联（如"扩张期品牌优先跟进"） |
-| 检索延迟 | 全图遍历，延迟高 | Leiden 社区摘要预加载，延迟下降 60% |
+| 检索延迟 | 全图遍历，延迟高 | 第一阶段固定 Schema + Cypher 模板检索；第三阶段可选 Leiden 社区摘要预加载（目标值，待验证） |
 
 ---
 
@@ -41,30 +51,65 @@
 
 ### 2.1 核心技术栈
 
+> 🔴 **双语言架构**：Java 负责业务平台（CRUD + 确定性计算），Python 负责 AI 模块（Agent + GraphRAG + 生成）。
+
 | 层 | 技术 | 版本 | 选型理由 |
 |----|------|------|----------|
-| **主语言** | Python | 3.10+ | 与 interview-arena（Java）形成双语言经历，AI 生态更成熟 |
-| **Web 框架** | FastAPI | 0.110+ | 异步高性能，原生支持 SSE 流式输出 |
+| **业务平台语言** | Java | 17+ | 地铁站/广告位 CRUD、投前投后报告计算、调用团队已有曝光算法，企业级稳定性 |
+| **AI 模块语言** | Python | 3.10+ | AI 生态成熟，LlamaIndex/LangChain 等框架原生支持 |
+| **Web 框架（AI 侧）** | FastAPI | 0.110+ | 异步高性能，原生支持 SSE 流式输出 |
+| **Web 框架（业务侧）** | Spring Boot | 3.x | Java 业务平台 REST API，对接 MySQL + 已有算法 |
 | **AI 框架** | LlamaIndex | 0.10+ | 模块化好，可定制 GraphRAG pipeline |
 | **文本大模型** | 豆包 2.0 | 火山引擎 | 德高与火山引擎有合作，Function Calling 能力强 |
 | **图像生成** | 即梦 AI 绘画 | 火山引擎 | 统一火山引擎生态，支持文生图/图生图 |
-| **视频生成** | 即梦视频 | 火山引擎 | 图生视频，2 分钟出片 |
+| **视频生成** | 即梦视频 | 火山引擎 | 图生视频 |
 | **图数据库** | Neo4j | 5.x 社区版 | 业界标准，Cypher 查询语言适合多跳推理 |
 | **向量库** | Milvus Standalone | 2.3+ | 高性能，Docker 单机部署 |
-| **关系数据库** | MySQL | 8.0 | 存储业务数据、用户信息 |
+| **关系数据库** | MySQL | 8.0 | 存储业务数据、客流曝光、投放记录、报告结果 |
 | **缓存** | Redis | 7.x | 会话缓存、语义缓存 |
-| **MCP 协议** | FastMCP | 0.30+ | 统一工具调用协议，Agent 动态编排 |
+| **MCP 协议** | FastMCP | 0.30+ | 统一工具调用协议，Agent 动态编排，Java 能力封装为 MCP 工具供 Python Agent 调用 |
+
+#### 2.1.1 双语言职责分工
+
+| 模块 | 语言 | 职责 |
+|------|------|------|
+| **Java 业务平台** | Java + Spring Boot | 地铁站 CRUD、广告位 CRUD、人群画像查询、投放记录 CRUD、投前报告计算、投后报告计算、曝光指标查询、已有算法调用、报告数据持久化 |
+| **Python AI 模块** | Python + FastAPI | 自然语言理解、GraphRAG 检索、向量召回、Agent 编排、MCP Client 调用、答案生成、效果图工作流 |
+
+**推荐调用链**：
+
+```
+用户
+  ↓
+FastAPI Agent（Python）
+  ↓
+识别投前报告需求
+  ↓
+调用 MCP 工具
+  ↓
+Java 投前计算服务（Spring Boot）
+  ↓
+查询 MySQL + 调用既有曝光算法
+  ↓
+返回结构化计算结果
+  ↓
+Agent 结合 GraphRAG 案例生成报告
+```
+
+> 💡 **面试讲点**："我主要写 Java 数据库 CRUD，并调用团队已有算法完成投前和投后报告计算；这些能力由团队进一步封装成 MCP 工具供 Agent 使用，MCP 框架本身不是我搭建的。"
 
 ### 2.2 MCP 工具清单
 
-| MCP Server | 功能 | 数据源 | 调用场景 |
+> 🔴 MCP 工具是 Java 业务能力与 Python AI 模块的桥梁，Agent 通过 MCP 协议调用 Java 服务。
+
+| MCP Server | 功能 | 数据源 / 后端 | 调用场景 |
 |-----------|------|--------|---------|
-| **graphrag_search** | 检索本地知识图谱 | Neo4j + Milvus | "XX 茶饮最近投放趋势" |
-| **amap_search** | 查地铁口 POI、商圈、人流 | 高德地图 API | "徐家汇地铁站周边有什么商场" |
-| **bocha_search** | 实时舆情、官媒新闻 | 博查 API | "XX 品牌最近有什么新闻" |
-| **jimeng_image** | 生成广告概念图 | 即梦 AI 绘画 API | "生成一张地铁广告概念图" |
-| **jimeng_video** | 生成地铁广告视频 | 即梦视频 API | "生成一段地铁广告视频" |
-| **similar_case_search** | 检索相似历史案例 | Neo4j 图查询 | "有没有类似的茶饮品牌投放案例" |
+| **search_graphrag_cases** | 检索知识图谱历史案例 | Neo4j + Milvus | "有没有肯德基或类似快餐品牌的地铁投放案例" |
+| **query_station_profile** | 查询地铁站画像（客流/商圈/广告位） | Java 服务 + MySQL | "南京西路站有哪些广告位，客流多少" |
+| **calculate_pre_campaign_report** | 投前报告计算 | Java 服务 + MySQL + 曝光算法 | "肯德基在南京西路站投放，预计曝光多少" |
+| **calculate_post_campaign_report** | 投后报告计算 | Java 服务 + MySQL + 曝光算法 | "这次投放的实际效果如何" |
+| **search_company_info** | 实时舆情、官媒新闻 | 博查 API | "肯德基最近有什么新闻" |
+| **generate_ad_mockup** | 生成广告效果图/视频 | 即梦 AI 绘画 + 即梦视频 | "生成一张肯德基地铁广告效果图" |
 
 ---
 
@@ -73,93 +118,98 @@
 ### 3.1 整体架构图
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         用户层（CLI/API）                        │
-│                    销售对话窗口 / API 调用                        │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                ┌────────────▼────────────┐
-                │   Agent 调度中枢         │
-                │   (豆包 2.0 + MCP)       │
-                │                         │
-                │   • 意图识别             │
-                │   • 工具路由             │
-                │   • 冲突消解             │
-                │   • 流式输出             │
-                └────────────┬────────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-        ▼                    ▼                    ▼
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│ 决策引擎      │    │ 执行引擎      │    │ 融合中枢      │
-│ GraphRAG     │    │ 视频生成      │    │ MCP 工具集    │
-│              │    │              │    │              │
-│ • Neo4j      │    │ • 即梦 AI    │    │ • 高德地图    │
-│ • Milvus     │    │ • 即梦视频    │    │ • 博查舆情    │
-│ • LlamaIndex │    │ • OpenCV     │    │ • 案例检索    │
-└──────────────┘    └──────────────┘    └──────────────┘
-        │                    │                    │
-        └────────────────────┼────────────────────┘
-                             │
-                ┌────────────▼────────────┐
-                │   数据存储层             │
-                │                         │
-                │   • MySQL（业务数据）     │
-                │   • Redis（会话缓存）     │
-                │   • Neo4j（知识图谱）     │
-                │   • Milvus（向量索引）    │
-                └─────────────────────────┘
+                    用户提问
+                       ↓
+              FastAPI / Agent 服务
+                       ↓
+           意图识别 + 实体抽取 + 路由
+                       ↓
+       ┌───────────────┼────────────────┐
+       ↓               ↓                ↓
+GraphRAG 检索      Java 业务 MCP      外部信息 MCP
+（Python）         （Java）           （Python）
+       ↓               ↓                ↓
+Neo4j + Milvus    MySQL + 曝光算法   博查/地铁查询
+       └───────────────┼────────────────┘
+                       ↓
+              结果融合与业务排序
+                       ↓
+            投前/投后报告与案例说明
+                       ↓
+              效果图生成工作流
 ```
+
+**存储分工**：
+
+| 存储 | 存什么 | 为什么 |
+|------|--------|--------|
+| **Neo4j** | 品牌、人群、站点、广告位、活动、案例关系 | 多跳推理需要图遍历 |
+| **Milvus** | 报告、案例、文档、图片描述的语义召回 | 语义相似度匹配 |
+| **MySQL** | 客流、曝光、人群比例、投放记录、报告结果 | 结构化时序数据，Java CRUD + 计算 |
+| **Redis** | 会话缓存、语义缓存 | 低延迟缓存 |
+
+**语言分工**：
+
+| 语言 | 负责 |
+|------|------|
+| **Java** | CRUD 与确定性投前投后计算（地铁站、广告位、人群画像、投放记录、报告计算） |
+| **Python** | Agent、GraphRAG、MCP 编排和生成流程（意图识别、检索、答案生成、效果图） |
 
 ### 3.2 核心流程
 
-#### 决策引擎流程（GraphRAG）
+#### 决策引擎流程（GraphRAG + Java 业务 MCP）
 
 ```
-用户提问："徐家汇地铁站适合投 XX 茶饮的广告吗？"
+用户提问："肯德基想在南京西路站投放广告，合适吗？"
   │
-  ├── Step 1: Agent 意图识别 → 需要检索历史投放 + 地铁口数据 + 实时舆情
+  ├── Step 1: 查询理解与路由（LLM 提取实体和意图）
+  │   -> intent: "evaluate_station"
+  │   -> brand: "肯德基", city: "上海", station: "南京西路站"
+  │   -> 路由到：指定站点评估检索器
   │
-  ├── Step 2: 并行调用 MCP 工具
-  │   ├── graphrag_search("XX 茶饮", "上海", "投放趋势")
-  │   │   → Neo4j 图遍历：Brand → City → Campaign → StoreMetric
-  │   │   → Milvus 向量召回：语义相似的历史案例
-  │   │   → 融合结果：XX 茶饮近 3 月杭州门店 +12 家，坪效 +3%
+  ├── Step 2: 并行调用检索器 + MCP 工具
+  │   ├── GraphRAG 检索（Python）
+  │   │   -> Neo4j：Brand->AudienceSegment + MetroStation->AudienceSegment
+  │   │   -> Neo4j：MetroStation->AdLocation + Campaign->Case
+  │   │   -> Milvus：语义召回相似案例
+  │   │   -> 结果：肯德基目标人群与南京西路站人群匹配度
   │   │
-  │   ├── amap_search("徐家汇地铁站", "周边商圈", "人流")
-  │   │   → 高德 API：地铁口 POI、周边商场、日均人流
-  │   │   → 结果：徐家汇地铁站日均人流 50 万，周边 3 个大型商场
+  │   ├── query_station_profile（Java MCP）
+  │   │   -> Java 服务查询 MySQL：南京西路站客流、可用广告位
+  │   │   -> 结果：日均客流 45 万，可用广告位 8 个
   │   │
-  │   └── bocha_search("XX 茶饮", "最新新闻")
-  │       → 博查 API：官媒新闻、公告
-  │       → 结果：今日新华社官宣 XX 茶饮签约顶流代言人
+  │   ├── calculate_pre_campaign_report（Java MCP）
+  │   │   -> Java 服务调用曝光算法：预估曝光量
+  │   │   -> 结果：预计日均曝光 12 万次
+  │   │
+  │   └── search_company_info（MCP）
+  │       -> 博查 API：肯德基最新动态
+  │       -> 结果：肯德基新推出早餐系列，加大地铁广告投放
   │
-  ├── Step 3: Agent 冲突消解
-  │   • 历史规律：XX 茶饮处于扩张期，建议跟进
-  │   • 实时信号：代言人官宣，预计 72 小时内释放预算
-  │   • 融合结论：强烈建议跟进，置信度 92%
+  ├── Step 3: Agent 结果融合与业务排序
+  │   • 人群匹配度高 + 客流充足 + 历史案例支持
+  │   • 融合结论：推荐投放，建议选择站厅数字大屏
   │
-  └── Step 4: 生成自然语言回复 + 推荐动作
-      → "建议本周内触达 XX 茶饮，重点推徐家汇 + 商圈公交组合..."
+  └── Step 4: 生成自然语言回复 + 推荐动作 + 历史案例
+      -> "推荐肯德基在南京西路站投放，目标人群匹配度高等..."
 ```
 
-#### 执行引擎流程（视频生成）
+#### 执行引擎流程（效果图生成）
 
 ```
 用户追问："能生成个广告效果图吗？"
   │
-  ├── Step 1: Agent 意图识别 → 调用视频生成工具
+  ├── Step 1: Agent 意图识别 -> 调用 generate_ad_mockup MCP
   │
-  ├── Step 2: 调用 jimeng_image MCP
-  │   → 即梦 AI 绘画 API：生成广告概念图
-  │   → 输入：品牌 Logo + 风格参数 + 地铁场景
-  │   → 输出：3 版广告概念图供选择
+  ├── Step 2: 调用即梦 AI 绘画生成概念图
+  │   -> 即梦 AI 绘画 API：生成广告概念图
+  │   -> 输入：品牌 Logo + 风格参数 + 地铁场景
+  │   -> 输出：广告概念图供选择
   │
-  ├── Step 3: 调用 jimeng_video MCP
-  │   → 即梦视频 API：图生视频
-  │   → 输入：概念图 + 运镜参数（跟随地铁、光影变化）
-  │   → 输出：2 分钟地铁广告视频
+  ├── Step 3: 调用即梦视频生成动态视频
+  │   -> 即梦视频 API：图生视频
+  │   -> 输入：概念图 + 运镜参数（跟随地铁、光影变化）
+  │   -> 输出：地铁广告视频
   │
   └── Step 4: 返回视频 URL + 预览图
 ```
@@ -172,95 +222,343 @@
 
 #### 4.1.1 知识图谱设计
 
+> 🔴 在原有 Brand/City/StoreMetric/Campaign/Report/Industry 基础上，新增地铁广告领域模型节点，覆盖人群画像、地铁网络、广告资源、历史案例四大维度。
+
 **节点（Node）类型**：
+
+##### 原有节点
 
 | 节点类型 | 属性 | 示例 |
 |---------|------|------|
-| **Brand** | name, industry, annual_revenue | XX 茶饮，快消，年销售额 10 亿 |
+| **Brand** | name, industry, annual_revenue | 肯德基，快餐，年销售额 XX 亿 |
 | **City** | name, tier, population | 上海，一线，2500 万 |
-| **StoreMetric** | brand_id, city_id, store_count, avg_sales_per_store, date | XX 茶饮上海门店数 50，月均销售额 20 万 |
-| **Campaign** | brand_id, city_id, location_type, start_date, duration, impression | XX 茶饮上海地铁广告，2024-05，1 个月，曝光 500 万 |
+| **StoreMetric** | brand_id, city_id, store_count, avg_sales_per_store, date | 肯德基上海门店数 50，月均销售额 20 万 |
+| **Campaign** | brand_id, city_id, location_type, start_date, duration, impression | 肯德基上海地铁广告，2024-05，1 个月，曝光 500 万 |
 | **Report** | title, industry, publish_date, content_vector | 《2024 快消行业户外投放趋势报告》 |
-| **Industry** | name, key_brands, growth_rate | 快消，[XX 茶饮, YY 零食]，+5% |
+| **Industry** | name, key_brands, growth_rate | 快餐，[肯德基, 麦当劳]，+5% |
+
+##### 新增：人群画像节点
+
+| 节点类型 | 属性 | 示例 |
+|---------|------|------|
+| **AudienceSegment** | name, description, age_range, income_level | 年轻职场人群、学生人群、家庭人群、商务人群 |
+| **ConsumerTag** | tag_name, category | 快餐偏好、高消费、高频通勤、20-35 岁、工作日早高峰 |
+
+##### 新增：地铁网络与空间信息节点
+
+| 节点类型 | 属性 | 示例 |
+|---------|------|------|
+| **MetroLine** | line_name, city, operator | 上海 2 号线、12 号线、13 号线 |
+| **MetroStation** | name, city, daily_traffic, line_count | 南京西路站，上海，日均客流 45 万，3 条线换乘 |
+| **BusinessArea** | name, city, type, level | 南京西路商圈、徐家汇商圈、陆家嘴商圈 |
+| **District** | name, city | 静安区、黄浦区、浦东新区 |
+
+##### 新增：广告资源节点
+
+| 节点类型 | 属性 | 示例 |
+|---------|------|------|
+| **AdLocation** | name, station_id, format, estimated_impressions_per_hour, status | 南京西路站 A 出口灯箱、站厅数字大屏、扶梯墙面广告 |
+| **AdFormat** | format_name, description, typical_size | 灯箱、数字大屏、墙面贴纸、站台屏幕 |
+
+##### 新增：历史案例与报告节点
+
+| 节点类型 | 属性 | 示例 |
+|---------|------|------|
+| **Case** | title, brand, campaign_id, summary, outcome | 《肯德基南京西路站早餐系列投放案例》 |
+| **PreCampaignReport** | campaign_id, predicted_impression, predicted_reach, created_at | 投前预测：日均曝光 12 万次 |
+| **PostCampaignReport** | campaign_id, actual_impression, actual_reach, roi, created_at | 投后实际：日均曝光 11.5 万次，ROI 1.8 |
+| **Document** | title, type, content_vector, source_url | 投放方案 PDF、案例总结文档 |
+| **ImageAsset** | title, type, url, description_vector | 广告效果图、投放现场照片 |
 
 **边（Edge/关系）类型**：
 
-| 关系类型 | 起点 → 终点 | 属性 | 示例 |
+##### 原有关系
+
+| 关系类型 | 起点 -> 终点 | 属性 | 示例 |
 |---------|------------|------|------|
-| **OPERATES_IN** | Brand → City | market_share | XX 茶饮 → 上海，市场份额 15% |
-| **HAS_METRIC** | Brand → StoreMetric | date | XX 茶饮 → 门店指标，2024-04 |
-| **LAUNCHED** | Brand → Campaign | budget | XX 茶饮 → 上海地铁广告，预算 100 万 |
-| **SIMILAR_TO** | Campaign → Campaign | similarity_score | 茶饮案例 A → 茶饮案例 B，相似度 0.85 |
-| **BELONGS_TO** | Brand → Industry | sub_category | XX 茶饮 → 快消，奶茶细分 |
-| **LOCATED_IN** | Campaign → City | specific_location | 上海地铁广告 → 徐家汇站 |
+| **OPERATES_IN** | Brand -> City | market_share | 肯德基 -> 上海，市场份额 15% |
+| **HAS_METRIC** | Brand -> StoreMetric | date | 肯德基 -> 门店指标，2024-04 |
+| **LAUNCHED** | Brand -> Campaign | budget | 肯德基 -> 上海地铁广告，预算 100 万 |
+| **SIMILAR_TO** | Campaign -> Campaign | similarity_score | 快餐案例 A -> 快餐案例 B，相似度 0.85 |
+| **BELONGS_TO** | Brand -> Industry | sub_category | 肯德基 -> 快餐，炸鸡细分 |
+| **LOCATED_IN** | Campaign -> City | specific_location | 上海地铁广告 -> 南京西路站 |
+
+##### 新增：人群画像关系
+
+| 关系类型 | 起点 -> 终点 | 属性 | 示例 |
+|---------|------------|------|------|
+| **TARGETS** | Brand -> AudienceSegment | weight | 肯德基 -> 年轻职场人群，权重 0.8 |
+| **HAS_TAG** | AudienceSegment -> ConsumerTag | - | 年轻职场人群 -> 高频通勤 |
+| **CONCENTRATED_AT** | AudienceSegment -> MetroStation | ratio, period, data_version | 年轻职场人群 -> 南京西路站，占比 0.42，工作日早高峰 |
+
+##### 新增：地铁网络关系
+
+| 关系类型 | 起点 -> 终点 | 属性 | 示例 |
+|---------|------------|------|------|
+| **BELONGS_TO_LINE** | MetroStation -> MetroLine | - | 南京西路站 -> 2 号线 |
+| **LOCATED_IN_AREA** | MetroStation -> BusinessArea | - | 南京西路站 -> 南京西路商圈 |
+| **LOCATED_IN_DISTRICT** | BusinessArea -> District | - | 南京西路商圈 -> 静安区 |
+| **LOCATED_IN_CITY** | District -> City | - | 静安区 -> 上海 |
+
+##### 新增：广告资源关系
+
+| 关系类型 | 起点 -> 终点 | 属性 | 示例 |
+|---------|------------|------|------|
+| **HAS_AD_LOCATION** | MetroStation -> AdLocation | - | 南京西路站 -> 站厅数字大屏 |
+| **USES_FORMAT** | AdLocation -> AdFormat | - | 站厅数字大屏 -> 数字大屏 |
+
+##### 新增：投放与案例关系
+
+| 关系类型 | 起点 -> 终点 | 属性 | 示例 |
+|---------|------------|------|------|
+| **FOR_BRAND** | Campaign -> Brand | - | 上海地铁广告 -> 肯德基 |
+| **PLACED_AT** | Campaign -> AdLocation | duration | 肯德基广告 -> 站厅数字大屏，30 天 |
+| **TARGETED** | Campaign -> AudienceSegment | - | 肯德基广告 -> 年轻职场人群 |
+| **HAS_PRE_REPORT** | Campaign -> PreCampaignReport | - | 肯德基广告 -> 投前预测报告 |
+| **HAS_POST_REPORT** | Campaign -> PostCampaignReport | - | 肯德基广告 -> 投后效果报告 |
+| **HAS_CASE** | Campaign -> Case | - | 肯德基广告 -> 投放案例总结 |
+| **SUPPORTED_BY** | Case -> Document | - | 投放案例 -> 方案 PDF |
+| **HAS_ASSET** | Case -> ImageAsset | - | 投放案例 -> 效果图 |
+
+> 💡 **设计原则**：人流和人群画像的时序数据（weekday/weekend/morning/evening/month/quarter）存入 MySQL，图谱只保存关联关系和基础指标。大量历史时间序列不应全塞进 Neo4j。
 
 #### 4.1.2 GraphRAG 检索流程
 
-```python
-# 伪代码：GraphRAG 检索流程
-def graphrag_search(query: str, brand: str, city: str):
-    # Step 1: 向量召回（语义相似的历史案例）
-    vector_results = milvus_client.search(
-        collection="campaigns",
-        query_embedding=embed(query),
-        top_k=20
-    )
-    
-    # Step 2: 图遍历（多跳推理）
-    cypher_query = """
-    MATCH (b:Brand {name: $brand})-[:OPERATES_IN]->(c:City {name: $city})
-    MATCH (b)-[:HAS_METRIC]->(m:StoreMetric)
-    MATCH (b)-[:LAUNCHED]->(camp:Campaign)-[:LOCATED_IN]->(c)
-    RETURN m.store_count, m.avg_sales_per_store, camp.impression
-    ORDER BY m.date DESC LIMIT 3
-    """
-    graph_results = neo4j_client.run(cypher_query, brand=brand, city=city)
-    
-    # Step 3: 融合两路结果
-    context = merge_results(vector_results, graph_results)
-    
-    # Step 4: 送给大模型生成回答
-    response = doubao_client.chat(
-        system_prompt="你是户外广告决策助手...",
-        user_prompt=f"基于以下信息回答问题：{context}\n\n问题：{query}"
-    )
-    
-    return response
+> 🔴 企业级系统不能只有一条固定查询路径。根据用户意图，路由到三种不同检索场景。
+
+##### 场景一：宽泛点位推荐（recommend_ad_locations）
+
+**用户输入**：肯德基想在上海地铁投放广告。
+
+**检索路径**：
+
+```
+Brand -> AudienceSegment -> MetroStation -> AdLocation -> Campaign -> Case
 ```
 
-#### 4.1.3 Leiden 社区发现（优化检索性能）
+```python
+# 伪代码：场景一 - 宽泛点位推荐
+def recommend_ad_locations(brand: str, city: str):
+    # Step 1: 图遍历 - 品牌目标人群 -> 人群集中的站点 -> 站点广告位
+    cypher_query = """
+    MATCH (b:Brand {name: $brand})-[:TARGETS]->(a:AudienceSegment)
+    MATCH (a)-[c:CONCENTRATED_AT]->(s:MetroStation)
+    MATCH (s)-[:HAS_AD_LOCATION]->(al:AdLocation)
+    OPTIONAL MATCH (camp:Campaign)-[:PLACED_AT]->(al)
+    OPTIONAL MATCH (camp)-[:HAS_CASE]->(case:Case)
+    WHERE s.city = $city
+    RETURN s.name, s.daily_traffic, c.ratio, collect(al.name) as ad_locations,
+           collect(case.title) as cases
+    ORDER BY c.ratio DESC LIMIT 10
+    """
+    graph_results = neo4j_client.run(cypher_query, brand=brand, city=city)
+
+    # Step 2: Milvus 向量召回相似案例
+    vector_results = milvus_client.search(
+        collection="cases",
+        query_embedding=embed(f"{brand} 地铁广告投放案例"),
+        top_k=10
+    )
+
+    # Step 3: 融合结果 - 推荐站点 + 广告位 + 历史案例 + 预测曝光
+    return merge_results(graph_results, vector_results)
+```
+
+**输出**：推荐站点、推荐广告位、推荐依据、历史案例、预测曝光。
+
+##### 场景二：指定站点评估（evaluate_station）
+
+**用户输入**：肯德基想在南京西路站投放广告。
+
+**检索路径**：
+
+```
+Brand -> AudienceSegment
+MetroStation -> AudienceSegment（人群匹配度）
+MetroStation -> AdLocation（可用广告位）
+Campaign -> Case（相似案例）
+```
 
 ```python
-# 伪代码：Leiden 社区发现 + 社区摘要预加载
+# 伪代码：场景二 - 指定站点评估
+def evaluate_station(brand: str, station: str):
+    # Step 1: 图遍历 - 品牌人群 vs 站点人群匹配度
+    cypher_query = """
+    MATCH (b:Brand {name: $brand})-[:TARGETS]->(ba:AudienceSegment)
+    MATCH (s:MetroStation {name: $station})<-[c:CONCENTRATED_AT]-(sa:AudienceSegment)
+    WITH b, s, ba, sa, c
+    WHERE ba.name = sa.name
+    RETURN s.name, s.daily_traffic, ba.name as matched_segment, c.ratio
+
+    UNION
+
+    MATCH (s:MetroStation {name: $station})-[:HAS_AD_LOCATION]->(al:AdLocation)
+    RETURN s.name, s.daily_traffic, null, collect(al.name) as ad_locations
+    """
+    graph_results = neo4j_client.run(cypher_query, brand=brand, station=station)
+
+    # Step 2: 同时调用 Java MCP 获取客流和曝光计算
+    station_profile = mcp_client.call("query_station_profile", {"station": station})
+    pre_report = mcp_client.call("calculate_pre_campaign_report",
+                                  {"brand": brand, "station": station})
+
+    # Step 3: 融合 - 人群匹配度 + 客流 + 可用广告位 + 相似案例 + 预计曝光
+    return merge_results(graph_results, station_profile, pre_report)
+```
+
+**输出**：人群匹配度、站点客流、可用广告位、相似案例、预计曝光。
+
+##### 场景三：历史案例检索（search_cases）
+
+**用户输入**：有没有肯德基或者类似快餐品牌的地铁投放案例？
+
+**检索路径**：
+
+```
+Brand -> Industry -> Similar Brand -> Campaign -> Case -> Document/ImageAsset
+```
+
+```python
+# 伪代码：场景三 - 历史案例检索
+def search_cases(brand: str):
+    # Step 1: Milvus 语义召回案例（主路径）
+    vector_results = milvus_client.search(
+        collection="cases",
+        query_embedding=embed(f"{brand} 地铁广告投放案例"),
+        top_k=20
+    )
+
+    # Step 2: Neo4j 扩展同类品牌与相似点位
+    cypher_query = """
+    MATCH (b:Brand {name: $brand})-[:BELONGS_TO]->(i:Industry)<-[:BELONGS_TO]-(sb:Brand)
+    MATCH (sb)-[:LAUNCHED]->(camp:Campaign)-[:HAS_CASE]->(case:Case)
+    OPTIONAL MATCH (case)-[:SUPPORTED_BY]->(doc:Document)
+    OPTIONAL MATCH (case)-[:HAS_ASSET]->(img:ImageAsset)
+    RETURN sb.name, camp.start_date, case.title, case.outcome,
+           collect(doc.title) as documents, collect(img.url) as images
+    LIMIT 15
+    """
+    graph_results = neo4j_client.run(cypher_query, brand=brand)
+
+    # Step 3: 融合 - 语义召回 + 同类品牌案例扩展
+    return merge_results(vector_results, graph_results)
+```
+
+**输出**：同类品牌投放案例、案例文档、效果图、投放效果。
+
+#### 4.1.3 查询理解与路由层
+
+> 🔴 LLM 提取实体和意图，路由器选择对应的 Cypher 模板、向量检索器和 MCP 工具。不是 Neo4j 自己判断，而是先理解再路由。
+
+```python
+# 伪代码：查询理解与路由
+def query_understanding(user_query: str):
+    # Step 1: LLM 提取实体和意图，输出 JSON
+    prompt = """
+    分析用户问题，提取以下信息并输出 JSON：
+    - intent: 意图（recommend_ad_locations / evaluate_station / search_cases
+              / calculate_pre_report / calculate_post_report）
+    - brand: 品牌名
+    - city: 城市
+    - station: 地铁站（如有）
+    - audience: 人群（如有）
+    - budget: 预算（如有）
+    - campaign_period: 投放周期（如有）
+    - ad_format: 广告形式（如有）
+    """
+    parsed = doubao_client.chat(
+        system_prompt=prompt,
+        user_prompt=user_query
+    )
+    # 示例输出：
+    # {
+    #   "intent": "evaluate_station",
+    #   "brand": "肯德基",
+    #   "city": "上海",
+    #   "station": "南京西路站",
+    #   "audience": null,
+    #   "budget": null,
+    #   "campaign_period": null,
+    #   "ad_format": null
+    # }
+
+    return json.loads(parsed)
+
+
+def route_to_retriever(parsed_query: dict):
+    intent = parsed_query["intent"]
+
+    # 根据 intent 路由到不同检索器
+    if intent == "recommend_ad_locations":
+        return recommend_ad_locations(
+            brand=parsed_query["brand"],
+            city=parsed_query["city"]
+        )
+    elif intent == "evaluate_station":
+        return evaluate_station(
+            brand=parsed_query["brand"],
+            station=parsed_query["station"]
+        )
+    elif intent == "search_cases":
+        return search_cases(brand=parsed_query["brand"])
+    elif intent == "calculate_pre_report":
+        return mcp_client.call("calculate_pre_campaign_report", parsed_query)
+    elif intent == "calculate_post_report":
+        return mcp_client.call("calculate_post_campaign_report", parsed_query)
+    else:
+        return fallback_retriever(parsed_query)
+```
+
+**意图路由表**：
+
+| Intent | 路由到 | 说明 |
+|--------|--------|------|
+| `recommend_ad_locations` | 点位推荐检索器 | 宽泛推荐，搜索全城站点 |
+| `evaluate_station` | 指定站点评估检索器 | 聚焦单站，计算匹配度 |
+| `search_cases` | 历史案例检索器 | 语义召回 + 同类品牌扩展 |
+| `calculate_pre_report` | 投前计算 MCP（Java） | 调用 Java 曝光算法 |
+| `calculate_post_report` | 投后计算 MCP（Java） | 调用 Java 效果计算 |
+
+#### 4.1.4 Leiden 社区发现（可选优化 · 第三阶段）
+
+> 🔴 Leiden 社区发现属于后续可选优化，当前阶段未实现，面试时如实说明。
+
+**分阶段演进**：
+
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| **第一阶段** | Neo4j 固定业务 Schema + Milvus 向量召回 + Cypher 模板检索 | ✅ 当前实现 |
+| **第二阶段** | 加入实体对齐、混合检索和重排序 | 🔄 规划中 |
+| **第三阶段** | 数据规模扩大后再尝试 Leiden 社区发现和社区摘要 | 📋 可选优化 |
+
+```python
+# 伪代码：第三阶段可选 - Leiden 社区发现 + 社区摘要预加载
+# 注意：当前未实现，仅作为后续优化方向的参考
 def build_community_summaries():
     # Step 1: 从 Neo4j 加载全图
     graph = neo4j_client.get_full_graph()
-    
+
     # Step 2: 运行 Leiden 算法分层聚类
     communities = leiden_algorithm(graph, resolution=1.0)
-    
+
     # Step 3: 为每个社区生成摘要
     for community_id, nodes in communities.items():
-        # 提取社区内所有节点的文本描述
         texts = [node.description for node in nodes]
-        
-        # 调用大模型生成社区摘要
         summary = doubao_client.chat(
             system_prompt="总结以下户外广告案例的共同特征...",
             user_prompt="\n".join(texts)
         )
-        
-        # 存储到 MySQL
         mysql_client.insert(
             "community_summaries",
             community_id=community_id,
             summary=summary,
             node_count=len(nodes)
         )
-    
-    # Step 4: 检索时先定位社区，再精细检索
-    # 检索延迟下降 60%
+
+    # Step 4: 检索时先定位社区，再精细检索（目标值，待验证）
 ```
+
+> 💡 **面试讲点**："我们核心是领域知识图谱和向量检索。社区发现属于后续可选优化，我没有参与这一部分，也不能确认真实系统是否采用。"
 
 ### 4.2 执行引擎：视频生成模块
 
@@ -370,38 +668,37 @@ class AgentOrchestrator:
     def __init__(self):
         self.doubao_client = DoubaoClient(model="doubao-2.0")
         self.mcp_tools = {
-            "graphrag_search": GraphRAGTool(),
-            "amap_search": AmapTool(),
-            "bocha_search": BochaTool(),
-            "jimeng_image": JimengImageTool(),
-            "jimeng_video": JimengVideoTool(),
-            "similar_case_search": SimilarCaseTool()
+            "search_graphrag_cases": GraphRAGTool(),
+            "query_station_profile": StationProfileTool(),
+            "calculate_pre_campaign_report": PreReportTool(),
+            "calculate_post_campaign_report": PostReportTool(),
+            "search_company_info": CompanyInfoTool(),
+            "generate_ad_mockup": AdMockupTool()
         }
     
     async def chat(self, user_message: str, session_id: str):
         # Step 1: 加载会话历史
         history = self.load_session_history(session_id)
         
-        # Step 2: 构建 System Prompt
+        # Step 2: 查询理解与路由
+        parsed = query_understanding(user_message)
+        
+        # Step 3: 构建 System Prompt
         system_prompt = """
         你是德高户外广告的智能决策助手。你可以调用以下工具：
-        - graphrag_search: 检索历史投放案例和品牌数据
-        - amap_search: 查询地铁口商圈、人流数据
-        - bocha_search: 查询实时新闻舆情
-        - jimeng_image: 生成广告概念图
-        - jimeng_video: 生成广告视频
-        - similar_case_search: 检索相似案例
+        - search_graphrag_cases: 检索知识图谱历史案例
+        - query_station_profile: 查询地铁站画像（客流/商圈/广告位）
+        - calculate_pre_campaign_report: 投前报告计算
+        - calculate_post_campaign_report: 投后报告计算
+        - search_company_info: 查询实时新闻舆情
+        - generate_ad_mockup: 生成广告效果图/视频
         
-        当用户询问客户优先级时，你需要：
-        1. 调用 graphrag_search 检索历史投放数据
-        2. 调用 amap_search 查询目标区域数据
-        3. 调用 bocha_search 查询实时新闻
-        4. 融合三路结果，输出结论 + 归因 + 推荐动作
-        
-        当用户要求生成视频时，调用 jimeng_video 工具。
+        当用户询问点位推荐时，调用 search_graphrag_cases 检索历史案例。
+        当用户询问指定站点评估时，调用 query_station_profile + calculate_pre_campaign_report。
+        当用户要求生成效果图时，调用 generate_ad_mockup 工具。
         """
         
-        # Step 3: 调用豆包 2.0（Function Calling）
+        # Step 4: 调用豆包 2.0（Function Calling）
         response = await self.doubao_client.chat(
             system_prompt=system_prompt,
             user_prompt=user_message,
@@ -409,7 +706,7 @@ class AgentOrchestrator:
             tools=list(self.mcp_tools.keys())
         )
         
-        # Step 4: 处理工具调用
+        # Step 5: 处理工具调用
         while response.has_tool_call():
             tool_name = response.tool_name
             tool_args = response.tool_args
@@ -422,7 +719,7 @@ class AgentOrchestrator:
                 tool_result=tool_result
             )
         
-        # Step 5: 返回最终回答
+        # Step 6: 返回最终回答
         return response.content
 ```
 
@@ -470,6 +767,76 @@ class ConflictResolver:
         }
 ```
 
+### 4.4 数据治理
+
+> 🔴 企业级知识库最关键的不是检索算法，而是数据治理。图谱质量直接决定 GraphRAG 效果。
+
+#### 4.4.1 实体统一
+
+**品牌实体对齐**：
+
+```
+KFC / 肯德基 / 肯德基中国 / 百胜旗下肯德基
+-> 映射到同一个 Brand 节点（name: "肯德基", aliases: ["KFC", "肯德基中国", ...]）
+```
+
+**地铁站实体对齐**：
+
+```
+南京西路 / 南京西路站 / 上海地铁南京西路站 / 2/12/13号线南京西路
+-> 映射到同一个 MetroStation 节点（name: "南京西路站", aliases: ["南京西路", ...]）
+```
+
+#### 4.4.2 数据溯源
+
+每个节点和关系增加溯源属性：
+
+| 属性 | 说明 | 示例 |
+|------|------|------|
+| `source_id` | 数据来源 ID | doc_001、api_amap_20240501 |
+| `source_type` | 来源类型 | document / api / manual / algorithm |
+| `source_system` | 来源系统 | 博查、高德、内部 CRM、曝光算法 |
+| `created_at` | 创建时间 | 2024-05-01T10:00:00 |
+| `updated_at` | 更新时间 | 2024-06-01T15:00:00 |
+| `data_version` | 数据版本 | 2024Q2、2024-05 |
+| `confidence` | 置信度 | 0.95（算法计算）、0.8（人工标注）、0.6（推测） |
+
+#### 4.4.3 权限控制
+
+公司内部案例有权限限制，GraphRAG 检索时必须**先做权限过滤，不能检索完再过滤**：
+
+| 权限级别 | 说明 | 示例 |
+|---------|------|------|
+| `public` | 公开案例，所有销售可见 | 已结案的公开投放案例 |
+| `sales_internal` | 销售内部可见 | 进行中的投放方案 |
+| `department_restricted` | 部门限制 | 特定行业组的客户数据 |
+| `confidential` | 机密 | 高管专属的战略级客户数据 |
+
+```python
+# 伪代码：权限过滤（在 Cypher 查询中加入权限条件）
+def build_permission_filter(user_role: str):
+    if user_role == "admin":
+        return ""  # 管理员无限制
+    elif user_role == "sales":
+        return "AND case.permission_level IN ['public', 'sales_internal']"
+    else:
+        return "AND case.permission_level = 'public'"
+```
+
+#### 4.4.4 时效性管理
+
+人流和人群画像有时间属性，不能把"2024 年早高峰画像"永远当作当前数据：
+
+| 时间维度 | 属性 | 示例 |
+|---------|------|------|
+| 日期类型 | `day_type` | weekday / weekend |
+| 时段 | `time_period` | morning / evening / noon / night |
+| 月份 | `month` | 2024-05 |
+| 季度 | `quarter` | 2024Q2 |
+| 数据版本 | `data_version` | 2024Q2（与溯源字段一致） |
+
+> 💡 **设计原则**：检索时必须指定 `data_version` 或 `time_period`，避免使用过期数据做决策。
+
 ---
 
 ## 五、数据库设计
@@ -512,7 +879,7 @@ CREATE TABLE IF NOT EXISTS video_task (
 ) COMMENT '视频任务表';
 ```
 
-#### community_summary（社区摘要表）
+#### community_summary（社区摘要表 · 第三阶段可选）
 
 ```sql
 CREATE TABLE IF NOT EXISTS community_summary (
@@ -523,7 +890,97 @@ CREATE TABLE IF NOT EXISTS community_summary (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_community_id (community_id)
-) COMMENT 'Leiden 社区摘要表';
+) COMMENT 'Leiden 社区摘要表（第三阶段可选优化，当前未使用）';
+```
+
+#### metro_station（地铁站表）
+
+```sql
+CREATE TABLE IF NOT EXISTS metro_station (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL COMMENT '站点名称',
+    city VARCHAR(50) NOT NULL COMMENT '所属城市',
+    line_count INT DEFAULT 1 COMMENT '换乘线路数',
+    daily_traffic INT COMMENT '日均客流',
+    business_area VARCHAR(100) COMMENT '所属商圈',
+    district VARCHAR(50) COMMENT '所属行政区',
+    data_version VARCHAR(20) COMMENT '数据版本',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_name_city (name, city),
+    INDEX idx_city (city)
+) COMMENT '地铁站信息表';
+```
+
+#### ad_location（广告位表）
+
+```sql
+CREATE TABLE IF NOT EXISTS ad_location (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    station_id BIGINT NOT NULL COMMENT '地铁站 ID',
+    name VARCHAR(200) NOT NULL COMMENT '广告位名称',
+    format VARCHAR(50) COMMENT '广告形式: 灯箱/数字大屏/墙面贴纸/站台屏幕',
+    estimated_impressions_per_hour INT COMMENT '预估每小时曝光',
+    status VARCHAR(20) DEFAULT 'available' COMMENT '状态: available/occupied/maintenance',
+    data_version VARCHAR(20) COMMENT '数据版本',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_station_id (station_id),
+    INDEX idx_status (status)
+) COMMENT '广告位信息表';
+```
+
+#### station_traffic（站点客流时序表）
+
+```sql
+CREATE TABLE IF NOT EXISTS station_traffic (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    station_id BIGINT NOT NULL COMMENT '地铁站 ID',
+    day_type VARCHAR(20) NOT NULL COMMENT 'weekday/weekend',
+    time_period VARCHAR(20) NOT NULL COMMENT 'morning/evening/noon/night',
+    traffic_count INT NOT NULL COMMENT '客流量',
+    month VARCHAR(10) NOT NULL COMMENT '月份: 2024-05',
+    data_version VARCHAR(20) COMMENT '数据版本',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_station_month (station_id, month),
+    INDEX idx_day_type_period (day_type, time_period)
+) COMMENT '地铁站客流时序数据表';
+```
+
+#### audience_distribution（人群分布表）
+
+```sql
+CREATE TABLE IF NOT EXISTS audience_distribution (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    station_id BIGINT NOT NULL COMMENT '地铁站 ID',
+    segment_name VARCHAR(100) NOT NULL COMMENT '人群名称',
+    ratio DECIMAL(5,4) NOT NULL COMMENT '占比',
+    day_type VARCHAR(20) NOT NULL COMMENT 'weekday/weekend',
+    time_period VARCHAR(20) NOT NULL COMMENT '时段',
+    data_version VARCHAR(20) NOT NULL COMMENT '数据版本',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_station_segment (station_id, segment_name),
+    INDEX idx_data_version (data_version)
+) COMMENT '地铁站人群分布时序表';
+```
+
+#### campaign_report（投放报告表）
+
+```sql
+CREATE TABLE IF NOT EXISTS campaign_report (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    campaign_id BIGINT NOT NULL COMMENT '投放活动 ID',
+    report_type VARCHAR(20) NOT NULL COMMENT 'pre/post',
+    predicted_impression INT COMMENT '预测曝光量（投前）',
+    actual_impression INT COMMENT '实际曝光量（投后）',
+    predicted_reach INT COMMENT '预测触达人数',
+    actual_reach INT COMMENT '实际触达人数',
+    roi DECIMAL(10,4) COMMENT '投资回报率',
+    algorithm_version VARCHAR(50) COMMENT '算法版本',
+    data_version VARCHAR(20) COMMENT '数据版本',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_campaign_type (campaign_id, report_type)
+) COMMENT '投前/投后报告表（Java 计算后持久化）';
 ```
 
 ### 5.2 Neo4j 图模型
@@ -533,16 +990,22 @@ CREATE TABLE IF NOT EXISTS community_summary (
 CREATE CONSTRAINT brand_name_unique FOR (b:Brand) REQUIRE b.name IS UNIQUE;
 CREATE CONSTRAINT city_name_unique FOR (c:City) REQUIRE c.name IS UNIQUE;
 CREATE CONSTRAINT industry_name_unique FOR (i:Industry) REQUIRE i.name IS UNIQUE;
+CREATE CONSTRAINT station_name_unique FOR (s:MetroStation) REQUIRE s.name IS UNIQUE;
+CREATE CONSTRAINT line_name_unique FOR (l:MetroLine) REQUIRE l.line_name IS UNIQUE;
+CREATE CONSTRAINT ad_location_name_unique FOR (al:AdLocation) REQUIRE al.name IS UNIQUE;
 
 // 创建索引
 CREATE INDEX brand_industry_idx FOR (b:Brand) ON (b.industry);
 CREATE INDEX campaign_date_idx FOR (c:Campaign) ON (c.start_date);
+CREATE INDEX station_city_idx FOR (s:MetroStation) ON (s.city);
+CREATE INDEX ad_location_station_idx FOR (al:AdLocation) ON (al.station_id);
 
-// 示例：创建节点
+// 示例：创建原有节点
 CREATE (b:Brand {
-    name: "XX茶饮",
-    industry: "快消",
-    annual_revenue: 1000000000
+    name: "肯德基",
+    industry: "快餐",
+    annual_revenue: 1000000000,
+    aliases: ["KFC", "肯德基中国"]
 })
 
 CREATE (c:City {
@@ -565,8 +1028,52 @@ CREATE (camp:Campaign {
     budget: 1000000
 })
 
-// 创建关系
-MATCH (b:Brand {name: "XX茶饮"})
+// 示例：创建新增节点
+CREATE (aud:AudienceSegment {
+    name: "年轻职场人群",
+    description: "20-35岁白领",
+    age_range: "20-35",
+    income_level: "medium-high"
+})
+
+CREATE (ml:MetroLine {
+    line_name: "上海2号线",
+    city: "上海",
+    operator: "上海地铁"
+})
+
+CREATE (ms:MetroStation {
+    name: "南京西路站",
+    city: "上海",
+    daily_traffic: 450000,
+    line_count: 3,
+    aliases: ["南京西路", "上海地铁南京西路站"]
+})
+
+CREATE (ba:BusinessArea {
+    name: "南京西路商圈",
+    city: "上海",
+    type: "商业",
+    level: "核心"
+})
+
+CREATE (al:AdLocation {
+    name: "南京西路站站厅数字大屏",
+    station_id: 1,
+    format: "digital_screen",
+    estimated_impressions_per_hour: 12000,
+    status: "available"
+})
+
+CREATE (case:Case {
+    title: "肯德基南京西路站早餐系列投放案例",
+    brand: "肯德基",
+    summary: "针对早高峰通勤人群投放早餐系列广告",
+    outcome: "日均曝光12万次，门店客流增长15%"
+})
+
+// 创建原有关系
+MATCH (b:Brand {name: "肯德基"})
 MATCH (c:City {name: "上海"})
 MATCH (sm:StoreMetric {date: "2024-04"})
 MATCH (camp:Campaign {start_date: "2024-05"})
@@ -574,6 +1081,24 @@ CREATE (b)-[:OPERATES_IN {market_share: 0.15}]->(c)
 CREATE (b)-[:HAS_METRIC]->(sm)
 CREATE (b)-[:LAUNCHED {budget: 1000000}]->(camp)
 CREATE (camp)-[:LOCATED_IN]->(c)
+
+// 创建新增关系
+MATCH (b:Brand {name: "肯德基"})
+MATCH (aud:AudienceSegment {name: "年轻职场人群"})
+MATCH (ms:MetroStation {name: "南京西路站"})
+MATCH (ml:MetroLine {line_name: "上海2号线"})
+MATCH (ba:BusinessArea {name: "南京西路商圈"})
+MATCH (al:AdLocation {name: "南京西路站站厅数字大屏"})
+MATCH (camp:Campaign {start_date: "2024-05"})
+MATCH (case:Case {title: "肯德基南京西路站早餐系列投放案例"})
+CREATE (b)-[:TARGETS {weight: 0.8}]->(aud)
+CREATE (aud)-[:CONCENTRATED_AT {ratio: 0.42, period: "weekday_morning", data_version: "2025-03"}]->(ms)
+CREATE (ms)-[:BELONGS_TO_LINE]->(ml)
+CREATE (ms)-[:LOCATED_IN_AREA]->(ba)
+CREATE (ms)-[:HAS_AD_LOCATION]->(al)
+CREATE (camp)-[:PLACED_AT {duration: 30}]->(al)
+CREATE (camp)-[:TARGETED]->(aud)
+CREATE (camp)-[:HAS_CASE]->(case)
 ```
 
 ### 5.3 Milvus 向量集合
@@ -582,18 +1107,41 @@ CREATE (camp)-[:LOCATED_IN]->(c)
 # 伪代码：Milvus 集合定义
 from pymilvus import CollectionSchema, FieldSchema, DataType
 
-# Campaign 向量集合
+# Case 向量集合（案例语义召回）
 fields = [
     FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
-    FieldSchema(name="campaign_id", dtype=DataType.INT64),
+    FieldSchema(name="case_id", dtype=DataType.INT64),
     FieldSchema(name="brand", dtype=DataType.VARCHAR, max_length=200),
     FieldSchema(name="city", dtype=DataType.VARCHAR, max_length=100),
-    FieldSchema(name="description", dtype=DataType.VARCHAR, max_length=1000),
+    FieldSchema(name="title", dtype=DataType.VARCHAR, max_length=500),
+    FieldSchema(name="description", dtype=DataType.VARCHAR, max_length=2000),
     FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=1536)
 ]
 
-schema = CollectionSchema(fields=fields, description="Campaign vector collection")
-collection = Collection(name="campaigns", schema=schema)
+schema = CollectionSchema(fields=fields, description="Case vector collection")
+collection = Collection(name="cases", schema=schema)
+
+# Document 向量集合（文档语义召回）
+doc_fields = [
+    FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
+    FieldSchema(name="doc_id", dtype=DataType.INT64),
+    FieldSchema(name="title", dtype=DataType.VARCHAR, max_length=500),
+    FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=4000),
+    FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=1536)
+]
+doc_schema = CollectionSchema(fields=doc_fields, description="Document vector collection")
+doc_collection = Collection(name="documents", schema=doc_schema)
+
+# ImageAsset 向量集合（图片描述语义召回）
+img_fields = [
+    FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
+    FieldSchema(name="asset_id", dtype=DataType.INT64),
+    FieldSchema(name="title", dtype=DataType.VARCHAR, max_length=500),
+    FieldSchema(name="description", dtype=DataType.VARCHAR, max_length=1000),
+    FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=1536)
+]
+img_schema = CollectionSchema(fields=img_fields, description="ImageAsset vector collection")
+img_collection = Collection(name="image_assets", schema=img_schema)
 
 # 创建索引
 index_params = {
@@ -1078,28 +1626,36 @@ volumes:
 
 | 亮点 | 怎么讲 |
 |------|--------|
-| **GraphRAG 替代纯向量检索** | "传统 RAG 只能做语义相似匹配，无法多跳推理。我用 LlamaIndex + Neo4j 构建了 GraphRAG，支持'品牌→城市→坪效→历史案例'的多跳推理，检索准确率提升 30%" |
-| **Leiden 社区发现优化性能** | "图谱有几千个节点，每次查询都遍历全图太慢。我用 Leiden 算法分层聚类，提前算好每个社区的摘要，检索时先定位社区再精细检索，延迟下降 60%" |
-| **Agent 自主编排多路工具** | "我没有写死的 if-else，而是让 Agent 通过 Function Calling 动态调用 graphrag_search、amap_search、bocha_search、jimeng_video 等工具，实现真正的智能决策" |
-| **冲突消解规则引擎** | "当实时信号（如代言人官宣）与历史规律冲突时，我没有交给大模型判断，而是用 Java/Python 代码实现了三条确定性规则，保证决策的可解释性和稳定性" |
-| **双语言经历** | "interview-arena 项目我用 Java + Spring AI，这个项目我用 Python + LlamaIndex，熟悉两种技术栈的优劣，能根据场景灵活选型" |
+| **双语言架构（Java + Python）** | "我主要写 Java 数据库 CRUD，并调用团队已有算法完成投前和投后报告计算；这些能力由团队进一步封装成 MCP 工具供 Agent 使用。Python 侧负责 Agent 编排、GraphRAG 检索和答案生成。" |
+| **Leiden 社区发现（可选优化）** | "我们核心是领域知识图谱和向量检索。社区发现属于后续可选优化，我没有参与这一部分，也不能确认真实系统是否采用。分三阶段演进：第一阶段固定 Schema + Cypher 模板，第二阶段实体对齐 + 混合检索，第三阶段才考虑 Leiden。" |
+| **GraphRAG 三种检索场景** | "我没有用一条固定查询路径，而是根据用户意图路由到三种检索器：宽泛点位推荐、指定站点评估、历史案例检索。每种场景走不同的图遍历路径和 MCP 工具组合。" |
+| **查询理解与路由层** | "LLM 先提取实体和意图，输出 JSON（intent/brand/city/station 等），路由器再选择对应的 Cypher 模板、向量检索器和 MCP 工具。不是 Neo4j 自己判断，而是先理解再路由。" |
+| **数据治理** | "企业级知识库最关键的是数据治理。我做了实体统一（KFC/肯德基/肯德基中国映射到同一个 Brand）、数据溯源（每个节点有 source_id/data_version/confidence）、权限控制（检索时先做权限过滤）。" |
+| **地铁广告领域模型** | "图谱不只是 Brand/City/Campaign，我设计了人群画像（AudienceSegment）、地铁网络（MetroStation/MetroLine/BusinessArea）、广告资源（AdLocation/AdFormat）、历史案例（Case/Document/ImageAsset）四大维度。" |
+| **效果图生成工作流** | "人工制作广告效果图原来需要 3-4 天，平台辅助后约 1 天完成。这是业务交付效率的提升，不是接口延迟。" |
 
 ### 9.2 高频面试题
 
 1. **Q：GraphRAG 和普通 RAG 有什么区别？**
-   - A：普通 RAG 只能做语义相似匹配，GraphRAG 支持多跳推理（品牌→城市→坪效→历史案例），保留业务逻辑关联。
+   - A：普通 RAG 只能做语义相似匹配，GraphRAG 支持多跳推理（品牌->人群->站点->广告位->历史案例），保留业务逻辑关联。我们根据用户意图路由到三种检索场景，不是一条固定路径。
 
-2. **Q：Leiden 社区发现算法是什么？怎么用的？**
-   - A：Leiden 是图聚类算法，我把图谱分成多个社区，提前算好每个社区的摘要，检索时先定位社区再精细检索，延迟下降 60%。
+2. **Q：Neo4j、Milvus 和 MySQL 分别存什么？为什么不能全放进一个数据库？**
+   - A：Neo4j 存品牌、人群、站点、广告位、活动、案例的关系，需要多跳推理；Milvus 存报告、案例、文档、图片描述的向量，做语义召回；MySQL 存客流、曝光、人群比例、投放记录、报告结果等结构化时序数据，由 Java CRUD 和计算。三种数据特性不同，一个数据库无法同时满足图遍历、向量检索和关系查询的需求。
 
 3. **Q：Agent 是怎么编排工具的？**
-   - A：Agent 通过豆包 2.0 的 Function Calling 能力，根据用户意图动态调用 graphrag_search、amap_search、bocha_search 等工具，而不是写死的 if-else。
+   - A：Agent 先通过 LLM 做查询理解，提取 intent/brand/city/station 等实体，然后路由到对应的检索器或 MCP 工具。工具包括 search_graphrag_cases、query_station_profile、calculate_pre_campaign_report 等，通过 Function Calling 动态调用。
 
-4. **Q：实时信号和历史规律冲突怎么办？**
-   - A：我没有交给大模型判断，而是用代码实现了三条规则：实时高优信号 > 历史规律（覆盖）、实时中优 + 历史一致（增强置信度）、实时低优（仅补充）。
+4. **Q：Java 和 Python 怎么分工的？**
+   - A：Java 负责业务平台（地铁站/广告位 CRUD、人群画像查询、投前投后报告计算、曝光算法调用），Python 负责 AI 模块（Agent 编排、GraphRAG 检索、向量召回、答案生成、效果图工作流）。Java 能力封装成 MCP 工具供 Python Agent 调用。我主要写 Java 部分。
 
-5. **Q：视频生成是怎么做的？**
-   - A：用户要求生成视频时，Agent 调用 jimeng_image 生成概念图，再调用 jimeng_video 生成动态视频，整个过程异步执行，2 分钟出片。
+5. **Q：效果图生成是怎么做的？**
+   - A：Agent 调用 generate_ad_mockup MCP，先调用即梦 AI 绘画生成概念图，再调用即梦视频生成动态视频。人工制作原来需要 3-4 天，平台辅助后约 1 天完成（业务交付效率，非接口延迟）。
+
+6. **Q：Leiden 社区发现算法是什么？**
+   - A：Leiden 是图聚类算法，属于我们规划的第三阶段可选优化。我们核心是领域知识图谱和向量检索，社区发现我没有参与，不能确认真实系统是否采用。
+
+7. **Q：数据治理怎么做的？**
+   - A：实体统一（KFC/肯德基/肯德基中国映射到同一个 Brand，南京西路/南京西路站实体对齐）、数据溯源（source_id/source_type/data_version/confidence）、权限控制（public/sales_internal/department_restricted/confidential，检索时先过滤）、时效性管理（人流和人群画像按 weekday/weekend/morning/evening 分版本）。
 
 ---
 
@@ -1108,10 +1664,11 @@ volumes:
 | 风险 | 影响 | 应对措施 |
 |------|------|---------|
 | **豆包 API 限流** | 高频调用被限流 | 实现重试机制 + 降级策略（返回缓存结果） |
-| **Neo4j 查询慢** | 多跳查询性能差 | 优化 Cypher 查询 + 添加索引 + Leiden 社区预加载 |
+| **Neo4j 查询慢** | 多跳查询性能差 | 优化 Cypher 查询 + 添加索引（第三阶段可选 Leiden 社区预加载） |
 | **Milvus 内存不足** | 向量数据量大 | 分批加载 + 定期清理过期数据 |
 | **视频生成失败** | 即梦 API 调用失败 | 失败重试（最多 3 次）+ 降级返回概念图 |
 | **云端内存不足** | 16GB 内存紧张 | 严格限制各组件内存 + 监控告警 |
+| **Java 与 Python 跨语言调用** | MCP 协议稳定性 | MCP 工具超时降级 + 本地缓存 |
 
 ---
 
